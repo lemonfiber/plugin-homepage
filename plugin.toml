@@ -1,0 +1,32 @@
+schema_version = 1
+
+[plugin]
+id          = "homepage"
+name        = "Homepage"
+version     = "1.0.0"
+description = "One page linking everything, with live status"
+without_it  = "Remember a dozen URLs and ports"
+upstream    = "https://github.com/gethomepage/homepage"
+license     = "GPL-3.0-only"
+forms       = ["full"]
+
+[[service]]
+id          = "homepage"
+name        = "Homepage"
+image       = "ghcr.io/gethomepage/homepage"
+digest      = "sha256:a0b71c8e757298d02560186bab9fbe3fc2d375c523a62cc1019177b37e48aa28"
+tag         = "v1.13.2"
+port        = 3000
+bind        = "lan"
+health      = { kind = "http", path = "/", timeout_s = 60 }
+criticality = "enhancing"
+memory_mib  = 150
+reaches     = ""
+asks_for    = "Nothing beyond this machine. It reads the other services' own APIs over the stack's internal network to draw their status."
+config_path = "/app/config"
+user_mode   = "puid-env"
+replaces    = "homepage"
+
+[service.env]
+HOMEPAGE_ALLOWED_HOSTS = { setting = "homepage:allowed-hosts", default = "localhost:3000" }
+HOMEPAGE_VAR_LAN_HOST  = { setting = "lan-host", default = "localhost" }
