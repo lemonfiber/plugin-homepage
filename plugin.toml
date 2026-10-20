@@ -55,6 +55,9 @@ What makes the page the stack's is the list of services it links, read from
 the starting configuration. An empty list would be a dashboard of nothing.
 """
 
+[[ask]]
+capability = "proxy.front"
+
 [[claim]]
 capability = "dashboard.show"
 
