@@ -236,3 +236,21 @@ async fn a_file_that_is_not_text_is_refused_naming_it() {
         "{refused:?}"
     );
 }
+
+#[tokio::test]
+async fn a_record_holding_what_no_file_could_carry_is_refused() {
+    let directory = Directory::shipped("unrenderable");
+    let mut held = panels();
+    if let Some(group) = held.groups.first_mut() {
+        group.name = "{{HOMEPAGE_VAR_SECRET}}".to_owned();
+    }
+    let _ = std::fs::write(
+        directory.0.join(WRITTEN),
+        serde_json::to_string(&held).unwrap_or_default(),
+    );
+
+    assert!(matches!(
+        homepage(&directory.0).panels().await,
+        Err(Failure::Refused { .. })
+    ));
+}
