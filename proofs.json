@@ -13,12 +13,6 @@
       "kind": "proof",
       "outcome": "passed",
       "detail": ""
-    },
-    {
-      "id": "dashboard.show/shows",
-      "kind": "probe",
-      "outcome": "passed",
-      "detail": ""
     }
   ]
 }
