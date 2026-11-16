@@ -48,6 +48,7 @@ fn panels() -> Panels {
             }],
         }],
         widgets: vec![PageWidget::Resources],
+        hosts: Vec::new(),
     }
 }
 
@@ -76,6 +77,7 @@ async fn the_shipped_files_show_nothing_of_lemonfibers() {
         Some(Panels {
             groups: Vec::new(),
             widgets: Vec::new(),
+            hosts: Vec::new(),
         })
     );
 }
@@ -253,4 +255,26 @@ async fn a_record_holding_what_no_file_could_carry_is_refused() {
         homepage(&directory.0).panels().await,
         Err(Failure::Refused { .. })
     ));
+}
+
+#[tokio::test]
+async fn a_check_on_no_host_the_panel_list_names_is_refused_naming_it_before_anything_is_written() {
+    let directory = Directory::shipped("unreached");
+    let mut asked = panels();
+    if let Some(entry) = asked
+        .groups
+        .first_mut()
+        .and_then(|group| group.entries.first_mut())
+    {
+        entry.check = Some("http://169.254.169.254/latest/meta-data".to_owned());
+    }
+
+    let refused = homepage(&directory.0).apply(&asked).await;
+
+    assert!(
+        matches!(&refused, Err(Failure::Refused { detail, .. }) if detail.contains("169.254.169.254")),
+        "{refused:?}"
+    );
+    assert_eq!(directory.file(SERVICES), SHIPPED_SERVICES);
+    assert!(directory.file(WRITTEN).is_empty());
 }

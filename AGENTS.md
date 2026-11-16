@@ -48,6 +48,16 @@ says how the catalogue pins this repository and how lemonfiber carries it.
 - **Every value is held to its grammar before anything is written**: an address
   is `http` or `https`, an icon a plain name or such an address, and text carries
   no control character and nothing Homepage expands (`{{`, `$`).
+- **Every address Homepage's server asks is a service on the stack's network.** An
+  entry's check (`siteMonitor`) and a status page's address are asked by Homepage's
+  own server, so each is parsed and held to `http` or `https`, no account, no
+  fragment, and a host that is one of the panel list's `hosts` (`ARCH-R434`), the
+  names the core gives a check at, and one label of a service's name. Anything else
+  is refused before anything is written, and so are a name a container's hosts file
+  holds (`localhost` and the `ip6-` names), a container's id and a metadata or cluster
+  name (`metadata`, `instance-data`, `kubernetes`) even where `hosts` names one. What is written is the parsed address; a
+  status page is an origin, `scheme://host[:port]`, and its name is lowercase
+  letters, digits and `-`, so the address read from it names no other path.
 - **A file changed by hand is never written over.** One that is neither the file
   last written nor the one this plugin ships is named in the refusal.
 - **The core's crates move with the train.** The `rev` in `Cargo.toml` is the

@@ -29,6 +29,7 @@ fn panels(entry: Entry) -> Panels {
                 url: "https://duckduckgo.com/?q=".to_owned(),
             },
         ],
+        hosts: vec!["door".to_owned(), "uptime-kuma".to_owned()],
     }
 }
 
@@ -198,4 +199,155 @@ fn a_value_longer_than_any_label_is_refused() {
     let mut long = entry();
     long.description = "a".repeat(2049);
     assert!(matches!(rendered(&panels(long)), Err(Refused::Text(_))));
+}
+
+#[test]
+fn a_check_or_status_page_off_the_stacks_network_is_refused_naming_it() {
+    for asked in [
+        "http://sonarr:8989/ping",
+        "http://127.0.0.1:8080/health",
+        "http://169.254.169.254/latest/meta-data",
+        "http://[fd00:ec2::254]/",
+        "http://metadata/computeMetadata/v1",
+        "http://metadata.google.internal/computeMetadata/v1",
+        "http://localhost:8080/healthz",
+        "https://example.com/health",
+        "http://user:pass@door:8096/health",
+        "http://[door/health",
+    ] {
+        let mut checked = entry();
+        checked.check = Some(asked.to_owned());
+        assert_eq!(
+            rendered(&panels(checked)),
+            Err(Refused::Unreached(asked.to_owned())),
+            "{asked}"
+        );
+        let mut monitored = entry();
+        monitored.widget = Some(EntryWidget::StatusPage {
+            url: asked.to_owned(),
+            page: "household".to_owned(),
+        });
+        assert_eq!(
+            rendered(&panels(monitored)),
+            Err(Refused::Unreached(asked.to_owned())),
+            "{asked}"
+        );
+    }
+}
+
+#[test]
+fn a_host_the_panel_list_names_is_still_held_to_one_label() {
+    let mut checked = entry();
+    checked.check = Some("http://door.lan:8096/health".to_owned());
+    let mut asked = panels(checked);
+    asked.hosts.push("door.lan".to_owned());
+
+    assert_eq!(
+        rendered(&asked),
+        Err(Refused::Unreached("http://door.lan:8096/health".to_owned()))
+    );
+}
+
+#[test]
+fn a_check_is_written_as_it_parses_and_a_status_page_as_its_origin() {
+    let mut checked = entry();
+    checked.check = Some("http://DOOR:80/./health/../ping".to_owned());
+    checked.widget = Some(EntryWidget::StatusPage {
+        url: "http://Uptime-Kuma:3001/".to_owned(),
+        page: "household".to_owned(),
+    });
+    let written = rendered(&panels(checked)).unwrap_or_else(|_| none());
+
+    assert_eq!(
+        read(&written.services).pointer("/0/Watch/0/Jellyfin/siteMonitor"),
+        Some(&json!("http://door/ping"))
+    );
+    assert_eq!(
+        read(&written.services).pointer("/0/Watch/0/Jellyfin/widget/url"),
+        Some(&json!("http://uptime-kuma:3001"))
+    );
+}
+
+#[test]
+fn a_check_carrying_a_fragment_or_a_status_page_carrying_a_path_is_refused_naming_it() {
+    let mut checked = entry();
+    checked.check = Some("http://door:8096/health#f".to_owned());
+    assert_eq!(
+        rendered(&panels(checked)),
+        Err(Refused::Address("http://door:8096/health#f".to_owned()))
+    );
+    for asked in [
+        "http://uptime-kuma:3001/x",
+        "http://uptime-kuma:3001/?a=b",
+        "http://uptime-kuma:3001/#f",
+    ] {
+        let mut monitored = entry();
+        monitored.widget = Some(EntryWidget::StatusPage {
+            url: asked.to_owned(),
+            page: "household".to_owned(),
+        });
+        assert_eq!(
+            rendered(&panels(monitored)),
+            Err(Refused::Address(asked.to_owned())),
+            "{asked}"
+        );
+    }
+}
+
+#[test]
+fn a_status_page_name_that_could_name_another_path_is_refused_naming_it() {
+    for page in ["../../api/secret", "house/hold", "House", "", "a?b"] {
+        let mut monitored = entry();
+        monitored.widget = Some(EntryWidget::StatusPage {
+            url: "http://uptime-kuma:3001".to_owned(),
+            page: page.to_owned(),
+        });
+        assert_eq!(
+            rendered(&panels(monitored)),
+            Err(Refused::Text(page.to_owned())),
+            "{page}"
+        );
+    }
+}
+
+#[test]
+fn a_name_that_is_no_service_is_refused_even_where_the_panel_list_names_it() {
+    for name in [
+        "metadata",
+        "instance-data",
+        "kubernetes",
+        "localhost",
+        "ip6-localhost",
+        "ip6-loopback",
+        "ip6-localnet",
+        "ip6-mcastprefix",
+        "ip6-allnodes",
+        "ip6-allrouters",
+        "3f4e5d6c7b8a",
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    ] {
+        let asked = format!("http://{name}/computeMetadata/v1");
+        let mut checked = entry();
+        checked.check = Some(asked.clone());
+        let mut listed = panels(checked);
+        listed.hosts.push(name.to_owned());
+        assert_eq!(rendered(&listed), Err(Refused::Unreached(asked)), "{name}");
+    }
+}
+
+#[test]
+fn a_name_near_a_refused_one_is_a_service_where_the_panel_list_names_it() {
+    for name in ["3f4e5d6c7b8", "mediaserver12", "metadatas"] {
+        let asked = format!("http://{name}:8080/health");
+        let mut checked = entry();
+        checked.check = Some(asked.clone());
+        let mut listed = panels(checked);
+        listed.hosts.push(name.to_owned());
+        let written = rendered(&listed).unwrap_or_else(|_| none());
+        assert_eq!(
+            read(&written.services).pointer("/0/Watch/0/Jellyfin/siteMonitor"),
+            Some(&json!(asked)),
+            "{name}"
+        );
+    }
 }
