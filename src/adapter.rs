@@ -18,8 +18,7 @@ pub const UPSTREAM: &str = "Homepage";
 /// The Homepage release this adapter's recordings were taken from.
 pub const RELEASE: &str = "v1.13.2";
 
-/// The digest of the image that release's recordings were taken from.
-pub const DIGEST: &str = "sha256:a0b71c8e757298d02560186bab9fbe3fc2d375c523a62cc1019177b37e48aa28";
+include!(concat!(env!("OUT_DIR"), "/fronted.rs"));
 
 /// What this adapter says it is: the contract it speaks and the release it supports.
 #[must_use]
