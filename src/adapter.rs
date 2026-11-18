@@ -15,9 +15,6 @@ pub const ADDRESS: &str = "/homepage";
 /// The upstream this adapter fronts, as its project names itself.
 pub const UPSTREAM: &str = "Homepage";
 
-/// The Homepage release this adapter's recordings were taken from.
-pub const RELEASE: &str = "v1.13.2";
-
 include!(concat!(env!("OUT_DIR"), "/fronted.rs"));
 
 /// What this adapter says it is: the contract it speaks and the release it supports.
